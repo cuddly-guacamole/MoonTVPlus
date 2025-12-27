@@ -27,12 +27,14 @@ export async function GET() {
       return NextResponse.json(cache.data);
     }
 
-    let result;
+    let result: any;
 
     // 根据配置的数据源获取数据
     if (bannerDataSource === 'TX') {
       // 使用TX数据源
       result = await getTXBannerContent();
+      // 添加数据源标识
+      result.source = 'TX';
       // 更新TX缓存
       txCache = {
         data: result,
@@ -52,6 +54,8 @@ export async function GET() {
 
       // 获取热门内容
       result = await getTMDBTrendingContent(apiKey, proxy);
+      // 添加数据源标识
+      result.source = 'TMDB';
       // 更新TMDB缓存
       tmdbCache = {
         data: result,

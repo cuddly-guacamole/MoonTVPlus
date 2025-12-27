@@ -28,8 +28,12 @@ export default function BannerCarousel({ autoPlayInterval = 5000 }: BannerCarous
   const isManualChange = useRef(false); // 标记是否为手动切换
 
   // LocalStorage 缓存配置
-  const LOCALSTORAGE_KEY = 'tmdb_trending_cache';
   const LOCALSTORAGE_DURATION = 24 * 60 * 60 * 1000; // 1天
+
+  // 根据数据源获取缓存key
+  const getLocalStorageKey = (source: string) => {
+    return `banner_trending_cache_${source}`;
+  };
 
   // 跳转到播放页面
   const handlePlay = (title: string) => {
@@ -51,34 +55,52 @@ export default function BannerCarousel({ autoPlayInterval = 5000 }: BannerCarous
   useEffect(() => {
     const fetchTrending = async () => {
       try {
-        // 先检查 localStorage 缓存
-        const cached = localStorage.getItem(LOCALSTORAGE_KEY);
-        if (cached) {
-          try {
-            const { data, timestamp } = JSON.parse(cached);
-            const now = Date.now();
-            
-            // 如果缓存未过期，直接使用
-            if (now - timestamp < LOCALSTORAGE_DURATION) {
-              setItems(data);
-              setIsLoading(false);
-              return;
+        // 先尝试从所有可能的数据源缓存中读取
+        const sources = ['TMDB', 'TX'];
+        let cachedData = null;
+        let validSource = null;
+
+        for (const source of sources) {
+          const cacheKey = getLocalStorageKey(source);
+          const cached = localStorage.getItem(cacheKey);
+
+          if (cached) {
+            try {
+              const { data, timestamp } = JSON.parse(cached);
+              const now = Date.now();
+
+              // 如果缓存未过期，使用缓存数据
+              if (now - timestamp < LOCALSTORAGE_DURATION) {
+                cachedData = data;
+                validSource = source;
+                break;
+              }
+            } catch (e) {
+              console.error('解析缓存数据失败:', e);
             }
-          } catch (e) {
-            // 缓存解析失败，继续请求 API
-            console.error('解析缓存数据失败:', e);
           }
         }
 
-        // 从 API 获取数据
+        // 如果有有效的缓存，直接使用，不请求API
+        if (cachedData) {
+          setItems(cachedData);
+          setIsLoading(false);
+          return;
+        }
+
+        // 没有缓存或缓存过期，从 API 获取数据
         const response = await fetch('/api/tmdb/trending');
         const result = await response.json();
+
         if (result.code === 200 && result.list.length > 0) {
+          const dataSource = result.source || 'TMDB'; // 获取数据源标识
+          const cacheKey = getLocalStorageKey(dataSource);
+
           setItems(result.list);
-          
-          // 保存到 localStorage
+
+          // 保存到 localStorage（使用数据源特定的key）
           try {
-            localStorage.setItem(LOCALSTORAGE_KEY, JSON.stringify({
+            localStorage.setItem(cacheKey, JSON.stringify({
               data: result.list,
               timestamp: Date.now()
             }));
@@ -95,7 +117,7 @@ export default function BannerCarousel({ autoPlayInterval = 5000 }: BannerCarous
     };
 
     fetchTrending();
-  }, [LOCALSTORAGE_KEY, LOCALSTORAGE_DURATION]);
+  }, []);
 
   // 自动播放
   useEffect(() => {

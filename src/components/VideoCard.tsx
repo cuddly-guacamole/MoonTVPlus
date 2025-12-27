@@ -718,8 +718,8 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
             </div>
           )}
 
-          {/* 操作按钮 */}
-          {(config.showHeart || config.showCheckCircle) && (
+          {/* 操作按钮 - 继续观看不显示桌面端悬停按钮 */}
+          {(config.showHeart || config.showCheckCircle) && from !== 'playrecord' && (
             <div
               data-button="true"
               className='absolute bottom-3 right-3 flex gap-3 opacity-0 translate-y-2 transition-all duration-300 ease-in-out sm:group-hover:opacity-100 sm:group-hover:translate-y-0'
