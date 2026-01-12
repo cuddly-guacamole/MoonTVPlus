@@ -144,6 +144,12 @@ class EmbyManager {
     console.log('[EmbyManager] getEnabledSources 被调用');
     const sources = await this.getSources();
     console.log('[EmbyManager] 获取到所有源:', sources.length, '个');
+
+    // 详细打印每个源的 enabled 字段
+    sources.forEach((s, index) => {
+      console.log(`[EmbyManager] 源 ${index}: key=${s.key}, name=${s.name}, enabled=${s.enabled}, enabled类型=${typeof s.enabled}, enabled===true: ${s.enabled === true}`);
+    });
+
     const enabledSources = sources.filter(s => s.enabled);
     console.log('[EmbyManager] 过滤后启用的源:', enabledSources.length, '个');
     return enabledSources;
