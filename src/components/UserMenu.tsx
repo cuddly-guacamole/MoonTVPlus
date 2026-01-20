@@ -925,7 +925,8 @@ export const UserMenu: React.FC = () => {
 
   // 检查是否显示管理面板按钮
   const showAdminPanel =
-    authInfo?.role === 'owner' || authInfo?.role === 'admin';
+    (authInfo?.role === 'owner' || authInfo?.role === 'admin') &&
+    storageType !== 'localstorage';
 
   // 检查是否显示离线下载按钮
   const showOfflineDownload =
