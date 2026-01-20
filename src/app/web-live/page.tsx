@@ -23,6 +23,7 @@ export default function WebLivePage() {
   const [isChannelListCollapsed, setIsChannelListCollapsed] = useState(false);
   const [isVideoLoading, setIsVideoLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [selectedPlatform, setSelectedPlatform] = useState<string | null>(null);
 
   useEffect(() => {
     const meta = document.createElement('meta');
@@ -137,10 +138,29 @@ export default function WebLivePage() {
     if (source.platform === 'huya') {
       return `https://huya.com/${source.roomId}`;
     }
+    if (source.platform === 'bilibili') {
+      return `https://live.bilibili.com/${source.roomId}`;
+    }
     return '';
   };
 
   const platforms = Array.from(new Set(sources.map(s => s.platform)));
+
+  // 根据选中的平台筛选房间
+  const filteredSources = selectedPlatform
+    ? sources.filter(s => s.platform === selectedPlatform)
+    : sources;
+
+  // 处理平台点击
+  const handlePlatformClick = (platform: string) => {
+    setSelectedPlatform(platform);
+    setActiveTab('rooms');
+  };
+
+  // 清除平台筛选
+  const clearPlatformFilter = () => {
+    setSelectedPlatform(null);
+  };
 
   if (loading) {
     return (
@@ -477,8 +497,24 @@ export default function WebLivePage() {
 
                 {activeTab === 'rooms' && (
                   <div className='flex-1 overflow-y-auto space-y-2 pb-4 mt-4'>
-                    {sources.length > 0 ? (
-                      sources.map((source) => {
+                    {selectedPlatform && (
+                      <div className='mb-3 flex items-center justify-between px-2 py-2 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800'>
+                        <div className='flex items-center gap-2'>
+                          <span className='text-xs text-green-700 dark:text-green-300'>筛选平台:</span>
+                          <span className='text-sm font-medium text-green-800 dark:text-green-200'>
+                            {selectedPlatform === 'huya' ? '虎牙' : selectedPlatform === 'bilibili' ? '哔哩哔哩' : selectedPlatform}
+                          </span>
+                        </div>
+                        <button
+                          onClick={clearPlatformFilter}
+                          className='text-xs text-green-700 dark:text-green-300 hover:text-green-900 dark:hover:text-green-100 underline'
+                        >
+                          清除筛选
+                        </button>
+                      </div>
+                    )}
+                    {filteredSources.length > 0 ? (
+                      filteredSources.map((source) => {
                         const isActive = source.key === currentSource?.key;
                         return (
                           <button
@@ -503,7 +539,9 @@ export default function WebLivePage() {
                         <div className='w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4'>
                           <Radio className='w-8 h-8 text-gray-400 dark:text-gray-600' />
                         </div>
-                        <p className='text-gray-500 dark:text-gray-400 font-medium'>暂无可用房间</p>
+                        <p className='text-gray-500 dark:text-gray-400 font-medium'>
+                          {selectedPlatform ? '该平台暂无可用房间' : '暂无可用房间'}
+                        </p>
                       </div>
                     )}
                   </div>
@@ -514,23 +552,29 @@ export default function WebLivePage() {
                     <div className='flex-1 overflow-y-auto space-y-2 pb-20'>
                       {platforms.length > 0 ? (
                         platforms.map((platform) => (
-                          <div key={platform} className='flex items-start gap-3 px-2 py-3 rounded-lg bg-gray-200/50 dark:bg-white/10'>
+                          <button
+                            key={platform}
+                            onClick={() => handlePlatformClick(platform)}
+                            className='w-full flex items-start gap-3 px-2 py-3 rounded-lg bg-gray-200/50 dark:bg-white/10 hover:bg-gray-300/50 dark:hover:bg-white/20 transition-all duration-200 cursor-pointer'
+                          >
                             <div className='w-12 h-12 bg-gray-200 dark:bg-gray-600 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden'>
                               {platform === 'huya' ? (
                                 <img src='https://hd.huya.com/favicon.ico' alt='虎牙' className='w-8 h-8' />
+                              ) : platform === 'bilibili' ? (
+                                <img src='https://www.bilibili.com/favicon.ico' alt='哔哩哔哩' className='w-8 h-8' />
                               ) : (
                                 <Radio className='w-6 h-6 text-gray-500' />
                               )}
                             </div>
-                            <div className='flex-1 min-w-0'>
+                            <div className='flex-1 min-w-0 text-left'>
                               <div className='text-sm font-medium text-gray-900 dark:text-gray-100 truncate'>
-                                {platform === 'huya' ? '虎牙' : platform}
+                                {platform === 'huya' ? '虎牙' : platform === 'bilibili' ? '哔哩哔哩' : platform}
                               </div>
                               <div className='text-xs text-gray-500 dark:text-gray-400 mt-1'>
                                 {sources.filter(s => s.platform === platform).length} 个房间
                               </div>
                             </div>
-                          </div>
+                          </button>
                         ))
                       ) : (
                         <div className='flex flex-col items-center justify-center py-12 text-center'>

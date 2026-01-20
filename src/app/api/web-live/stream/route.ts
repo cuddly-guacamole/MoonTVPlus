@@ -24,6 +24,79 @@ function getAntiCode(oldAntiCode: string, streamName: string): string {
   return `wsSecret=${wsSecretMd5}&wsTime=${wsTime}&seqid=${seqId}&ctype=${urlQuery.get('ctype')}&ver=1&fs=${urlQuery.get('fs')}&uuid=${initUuid}&u=${uid}&t=${paramsT}&sv=${sdkVersion}&sdk_sid=${sdkSid}&codec=264`;
 }
 
+async function getBilibiliStream(roomId: string) {
+  const headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'Referer': 'https://live.bilibili.com/'
+  };
+
+  // 获取房间初始化信息
+  const roomInitRes = await fetch(`https://api.live.bilibili.com/room/v1/Room/room_init?id=${roomId}`, {
+    headers
+  });
+  const roomInitData = await roomInitRes.json();
+
+  if (roomInitData.code !== 0) {
+    throw new Error(roomInitData.message || '获取房间信息失败');
+  }
+
+  const roomData = roomInitData.data;
+  const realRoomId = roomData.room_id;
+  const liveStatus = roomData.live_status; // 0=未开播, 1=直播中, 2=轮播
+
+  if (liveStatus !== 1) {
+    throw new Error('直播未开启');
+  }
+
+  // 获取播放地址 (原画质量 qn=10000)
+  const playInfoRes = await fetch(
+    `https://api.live.bilibili.com/xlive/web-room/v2/index/getRoomPlayInfo?room_id=${realRoomId}&protocol=0,1&format=0,1,2&codec=0,1&qn=10000&platform=web&ptype=8`,
+    { headers }
+  );
+  const playInfoData = await playInfoRes.json();
+
+  if (playInfoData.code !== 0) {
+    throw new Error(playInfoData.message || '获取播放信息失败');
+  }
+
+  const playurl = playInfoData.data?.playurl_info?.playurl;
+  if (!playurl) {
+    throw new Error('未找到播放地址');
+  }
+
+  // 提取m3u8地址
+  let m3u8Url = '';
+  const streamList = playurl.stream || [];
+
+  for (const stream of streamList) {
+    const formatList = stream.format || [];
+    for (const fmt of formatList) {
+      if (fmt.format_name === 'ts') {
+        const codecList = fmt.codec || [];
+        for (const codec of codecList) {
+          const urlInfoList = codec.url_info || [];
+          const baseUrl = codec.base_url || '';
+
+          if (urlInfoList.length > 0 && baseUrl) {
+            const host = urlInfoList[0].host || '';
+            const extra = urlInfoList[0].extra || '';
+            m3u8Url = `${host}${baseUrl}${extra}`;
+            break;
+          }
+        }
+        if (m3u8Url) break;
+      }
+    }
+    if (m3u8Url) break;
+  }
+
+  if (!m3u8Url) {
+    throw new Error('未找到m3u8地址');
+  }
+
+  return m3u8Url;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -58,6 +131,16 @@ export async function GET(request: NextRequest) {
       const newAntiCode = getAntiCode(sFlvAntiCode, sStreamName);
       const streamUrl = `${sFlvUrl}/${sStreamName}.${sFlvUrlSuffix}?${newAntiCode}`;
       const proxyUrl = `/api/web-live/proxy/proxy.flv?url=${encodeURIComponent(streamUrl)}`;
+
+      return NextResponse.json({
+        url: proxyUrl,
+        originalUrl: streamUrl
+      });
+    }
+
+    if (platform === 'bilibili') {
+      const streamUrl = await getBilibiliStream(roomId);
+      const proxyUrl = `/api/web-live/proxy/proxy.m3u8?url=${encodeURIComponent(streamUrl)}`;
 
       return NextResponse.json({
         url: proxyUrl,
