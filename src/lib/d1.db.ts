@@ -14,8 +14,8 @@ import {
   DanmakuFilterConfig,
   Notification,
   MovieRequest,
-  AdminConfig,
 } from './types';
+import { AdminConfig } from './admin.types';
 import { DatabaseAdapter } from './d1-adapter';
 
 /**
@@ -732,6 +732,72 @@ export class D1Storage implements IStorage {
     } catch (err) {
       console.error('D1Storage.getUsersByTag error:', err);
       return [];
+    }
+  }
+
+  // 获取用户密码哈希（用于数据导出）
+  async getUserPasswordHash(userName: string): Promise<string | null> {
+    try {
+      const user = await this.db
+        .prepare('SELECT password_hash FROM users WHERE username = ?')
+        .bind(userName)
+        .first();
+
+      return user ? (user.password_hash as string) : null;
+    } catch (err) {
+      console.error('D1Storage.getUserPasswordHash error:', err);
+      return null;
+    }
+  }
+
+  // 直接设置用户密码哈希（用于数据导入，不进行二次哈希）
+  async setUserPasswordHash(userName: string, passwordHash: string): Promise<void> {
+    try {
+      await this.db
+        .prepare('UPDATE users SET password_hash = ? WHERE username = ?')
+        .bind(passwordHash, userName)
+        .run();
+    } catch (err) {
+      console.error('D1Storage.setUserPasswordHash error:', err);
+      throw err;
+    }
+  }
+
+  // 直接创建用户（用于数据导入，密码已经是哈希值）
+  async createUserWithHashedPassword(
+    userName: string,
+    passwordHash: string,
+    role: 'owner' | 'admin' | 'user',
+    createdAt: number,
+    tags?: string[],
+    oidcSub?: string,
+    enabledApis?: string[],
+    banned?: boolean
+  ): Promise<void> {
+    try {
+      await this.db
+        .prepare(`
+          INSERT INTO users (
+            username, password_hash, role, banned, tags, oidc_sub,
+            enabled_apis, created_at, playrecord_migrated,
+            favorite_migrated, skip_migrated
+          )
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 1, 1)
+        `)
+        .bind(
+          userName,
+          passwordHash,
+          role,
+          banned ? 1 : 0,
+          tags ? JSON.stringify(tags) : null,
+          oidcSub || null,
+          enabledApis ? JSON.stringify(enabledApis) : null,
+          createdAt
+        )
+        .run();
+    } catch (err) {
+      console.error('D1Storage.createUserWithHashedPassword error:', err);
+      throw err;
     }
   }
 

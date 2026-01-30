@@ -7,6 +7,13 @@
  * 注意：此模块仅在服务端使用，通过 webpack 配置排除客户端打包
  */
 
+// Cloudflare D1 Database 接口
+export interface D1Database {
+  prepare(query: string): D1PreparedStatement;
+  batch(statements: any[]): Promise<D1Result[]>;
+  exec(query: string): Promise<D1Result>;
+}
+
 // D1 PreparedStatement 接口
 export interface D1PreparedStatement {
   bind(...values: any[]): D1PreparedStatement;

@@ -49,41 +49,40 @@ function getD1Adapter(): any {
   // 动态导入适配器以避免客户端打包
   const { CloudflareD1Adapter, SQLiteAdapter } = require('./d1-adapter');
 
+  // 检查是否为 Cloudflare 构建
+  const isCloudflare = process.env.CF_PAGES === '1' || process.env.BUILD_TARGET === 'cloudflare';
+
   // 生产环境：Cloudflare Workers/Pages
-  if (typeof process !== 'undefined' && (process as any).env?.DB) {
+  if (isCloudflare && typeof process !== 'undefined' && (process as any).env?.DB) {
     console.log('Using Cloudflare D1 database');
     return new CloudflareD1Adapter((process as any).env.DB);
   }
 
   // 开发环境：better-sqlite3
-  if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') {
-    try {
-      const Database = require('better-sqlite3');
-      const path = require('path');
-      const fs = require('fs');
+  try {
+    const Database = require('better-sqlite3');
+    const path = require('path');
+    const fs = require('fs');
 
-      const dbPath = path.join(process.cwd(), '.data', 'moontv.db');
+    const dbPath = path.join(process.cwd(), '.data', 'moontv.db');
 
-      // 检查数据库文件是否存在
-      if (!fs.existsSync(dbPath)) {
-        console.error('❌ SQLite database not found. Please run: npm run init:sqlite');
-        throw new Error('SQLite database not initialized');
-      }
-
-      const db = new Database(dbPath);
-      db.pragma('journal_mode = WAL'); // 启用 WAL 模式提升性能
-
-      console.log('Using SQLite database (development mode)');
-      console.log('Database location:', dbPath);
-
-      return new SQLiteAdapter(db);
-    } catch (err) {
-      console.error('Failed to initialize SQLite:', err);
-      throw err;
+    // 检查数据库文件是否存在
+    if (!fs.existsSync(dbPath)) {
+      console.error('❌ SQLite database not found. Please run: npm run init:sqlite');
+      throw new Error('SQLite database not initialized');
     }
-  }
 
-  throw new Error('D1 database not available. Set NEXT_PUBLIC_STORAGE_TYPE to another option or configure D1.');
+    const db = new Database(dbPath);
+    db.pragma('journal_mode = WAL'); // 启用 WAL 模式提升性能
+
+    console.log('Using SQLite database (development mode)');
+    console.log('Database location:', dbPath);
+
+    return new SQLiteAdapter(db);
+  } catch (err) {
+    console.error('Failed to initialize SQLite:', err);
+    throw err;
+  }
 }
 
 // 单例存储实例
