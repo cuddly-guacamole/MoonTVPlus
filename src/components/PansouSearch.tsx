@@ -20,6 +20,7 @@ interface PansouSearchProps {
   keyword: string;
   triggerSearch?: boolean; // 触发搜索的标志
   onError?: (error: string) => void;
+  cloudTypes?: string[];
 }
 
 type DownloadTool = 'aria2' | 'Transmission' | 'qBittorrent';
@@ -31,7 +32,7 @@ const downloadToolOptions: Array<{ value: DownloadTool; label: string }> = [
 ];
 
 // 网盘类型映射
-const CLOUD_TYPE_NAMES: Record<string, string> = {
+export const CLOUD_TYPE_NAMES: Record<string, string> = {
   baidu: '百度网盘',
   aliyun: '阿里云盘',
   quark: '夸克网盘',
@@ -42,6 +43,7 @@ const CLOUD_TYPE_NAMES: Record<string, string> = {
   pikpak: 'PikPak',
   xunlei: '迅雷网盘',
   '123': '123网盘',
+  guangya: '光鸭云盘',
   magnet: '磁力链接',
   ed2k: '电驴链接',
   others: '其他',
@@ -63,6 +65,8 @@ const CLOUD_TYPE_COLORS: Record<string, string> = {
     'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-200',
   xunlei: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/40 dark:text-cyan-200',
   '123': 'bg-teal-100 text-teal-800 dark:bg-teal-900/40 dark:text-teal-200',
+  guangya:
+    'bg-lime-100 text-lime-800 dark:bg-lime-900/40 dark:text-lime-200',
   magnet: 'bg-gray-100 text-gray-800 dark:bg-gray-700/40 dark:text-gray-200',
   ed2k: 'bg-gray-100 text-gray-800 dark:bg-gray-700/40 dark:text-gray-200',
   others: 'bg-gray-100 text-gray-800 dark:bg-gray-700/40 dark:text-gray-200',
@@ -150,6 +154,7 @@ export default function PansouSearch({
   keyword,
   triggerSearch,
   onError,
+  cloudTypes = [],
 }: PansouSearchProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -264,6 +269,7 @@ export default function PansouSearch({
     setLoading(true);
     setError(null);
     setResults(null);
+    setSelectedType('all');
 
     try {
       const response = await fetch('/api/pansou/search', {
@@ -273,6 +279,7 @@ export default function PansouSearch({
         },
         body: JSON.stringify({
           keyword: currentKeyword,
+          cloud_types: cloudTypes,
         }),
       });
 
@@ -290,7 +297,7 @@ export default function PansouSearch({
     } finally {
       setLoading(false);
     }
-  }, [keyword, onError]);
+  }, [keyword, onError, cloudTypes]);
 
   useEffect(() => {
     // triggerSearch 变化时触发搜索（无论是 true 还是 false）
@@ -881,7 +888,9 @@ export default function PansouSearch({
                             {downloadingUrl === link.url ? (
                               <>
                                 <Loader2 className='h-3.5 w-3.5 animate-spin' />
-                                <span className='hidden sm:inline'>下载中...</span>
+                                <span className='hidden sm:inline'>
+                                  下载中...
+                                </span>
                               </>
                             ) : (
                               <>
