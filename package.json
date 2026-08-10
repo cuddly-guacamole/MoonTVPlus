@@ -127,7 +127,8 @@
     "typescript": "^4.9.5",
     "vercel": "^50.4.10",
     "webpack-obfuscator": "^3.5.1",
-    "edgeone": "^1.6.2"
+    "edgeone": "^1.6.2",
+    "wrangler": "^4.60.0"
   },
   "packageManager": "pnpm@10.14.0"
 }
