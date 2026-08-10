@@ -3,6 +3,13 @@ compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat"]
 main = ".open-next/worker.js"
 minify = true
+keep_vars = true
+account_id = "56753b07768b4b04011c78982dcacab2"
+
+routes = [{ pattern = "tv.629090.xyz/*", zone_name = "629090.xyz" }]
+
+[observability]
+enabled = true
 
 # 静态资源配置
 # Cloudflare Workers Assets 用于服务静态文件
@@ -14,8 +21,10 @@ binding = "ASSETS"
 [[d1_databases]]
 binding = "DB"
 database_name = "moontvplus"
-database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
+database_id = "d0e4d4fa-cc60-423f-bdca-502991a399d4"
 
 [vars]
 NODE_ENV = "production"
 BUILD_TARGET = "cloudflare"
+NEXT_PUBLIC_STORAGE_TYPE = "d1"
+USERNAME = "admin"
